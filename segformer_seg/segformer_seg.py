@@ -1,43 +1,41 @@
 import numpy as np
 import os
-from transformers import AutoFeatureExtractor, DetrForSegmentation
+from transformers import AutoFeatureExtractor, SegformerForSemanticSegmentation
 import torch
 from PIL import Image as PilImage
 from palette import ade_palette
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from vision_msgs.msg import Detection2DArray, Detection2D, ObjectHypothesisWithPose
 from std_msgs.msg import String
 from cv_bridge import CvBridge
 
 ALGO_VERSION = os.getenv("MODEL_NAME")
 
 if not ALGO_VERSION:
-    ALGO_VERSION = '<default here>'
+    ALGO_VERSION = 'nvidia/segformer-b0-finetuned-ade-512-512'
 
 
 def predict(image: Image):
     feature_extractor = AutoFeatureExtractor.from_pretrained(ALGO_VERSION)
-    model = DetrForSegmentation.from_pretrained(ALGO_VERSION)
+    model = SegformerForSemanticSegmentation.from_pretrained(ALGO_VERSION)
 
     inputs = feature_extractor(image, return_tensors="pt")
 
     with torch.no_grad():
         output = model(**inputs)
-
-    # Convert output to be between 0 and 1
-    sizes = torch.tensor([tuple(reversed(image.size))])
-    result = feature_extractor.post_process_segmentation(output, sizes)
     
-    return result[0]
+    labels = model.config.id2labels
+    return labels, output.logits
 
 
 class RosIO(Node):
     def __init__(self):
         super().__init__('minimal_subscriber')
-        self.declare_parameter('pub_image', False)
-        self.declare_parameter('pub_boxes', True)
+        self.declare_parameter('pub_image', True)
+        self.declare_parameter('pub_pixels', True)
+        self.declare_parameter('pub_detections', True)
+        self.declare_parameter('pub_masks', True)
         self.image_subscription = self.create_subscription(
             Image,
             '/<name>/sub/image_raw',
@@ -72,28 +70,30 @@ class RosIO(Node):
     def listener_callback(self, msg: Image):
         bridge = CvBridge()
         cv_image: np.ndarray = bridge.imgmsg_to_cv2(msg)
-        converted_image = PilImage.fromarray(np.uint8(cv_image), 'RGB')
-        result = predict(converted_image)
+        np_image = np.uint8(cv_image)
+        converted_image = PilImage.fromarray(np_image, 'RGB')
+        labels, logits = predict(converted_image)
         print(f'Predicted Segmentation')
 
-        # This code will change based on the result
+        upsampled_logits = torch.nn.functional.interpolate(logits,
+                                                size=np_image.size[::-1],  # (height, width)
+                                                mode='bilinear',
+                                                align_corners=False)
 
-        base = torch.zeros(result['masks'].shape[1:])
-        for i in range(len(result['labels'])):
-            base = base.masked_fill_(result['masks'][i] == 1, result['labels'][i])
-
-        pixels = base.numpy().astype(np.uint8)
-
-        if self.get_parameter('pub_pixels').value:
-            pixel_output = bridge.cv2_to_imgsmg(pixels, encoding="mono8")
-            self.pixels_publisher.publish(pixel_output)
-        
-        color_seg = np.zeros((base.shape[0], base.shape[1], 3), dtype=np.uint8)
-        color_seg = color_seg[..., ::-1]
-
+        # Second, apply argmax on the class dimension
+        seg = upsampled_logits.argmax(dim=1)[0]
+        color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)  # height, width, 3
         palette = np.array(ade_palette())
         for label, color in enumerate(palette):
-            color_seg[base == label, :] = color
+            color_seg[seg == label, :] = color
+            
+        # Convert to BGR
+        color_seg = color_seg[..., ::-1]
+
+        if self.get_parameter('pub_pixels').value:
+            pixel_output = bridge.cv2_to_imgsmg(seg, encoding="mono8")
+            self.pixels_publisher.publish(pixel_output)
+    
             
         if self.get_parameter('pub_image').value:
             img = np.uint8(cv_image) * 0.5 + color_seg * 0.5
@@ -106,8 +106,11 @@ class RosIO(Node):
         
 
         if self.get_parameter('pub_detections').value:
-            result = ' '.join(result['labels'].tolist())
-            self.detection_publisher.publish(result)
+            classes = torch.unique(seg).tolist()
+            results = []
+            for label in classes:
+                results.append(labels[label])
+            self.detection_publisher.publish(' '.join(results))
 
         
 

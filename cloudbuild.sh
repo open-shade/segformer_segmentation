@@ -1,8 +1,8 @@
 declare -a ROS_VERSIONS=( "foxy" "galactic" "humble" "rolling" )
 
-ORGANIZATION="microsoft"
-MODEL_NAME="<name>"
-declare -a MODEL_VERSIONS=( "<model versions here>" )
+ORGANIZATION="nvidia"
+MODEL_NAME="segformer"
+declare -a MODEL_VERSIONS=( "b0-finetuned-ade-512-512" "b1-finetuned-ade-512-512" "b2-finetuned-cityscapes-1024-1024" "b3-finetuned-cityscapes-1024-1024" "b4-finetuned-cityscapes-1024-1024" "b4-finetuned-ade-512-512" "b5-finetuned-ade-640-640" "b5-finetuned-cityscapes-1024-1024" )
 
 for VERSION in "${ROS_VERSIONS[@]}"
 do
