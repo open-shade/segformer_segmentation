@@ -1,6 +1,6 @@
 # SegFormer-ROS2 Wrapper
 
-This is a ROS2 wrapper for Vision Transformers for Dense Prediction with an image segmentation, [SegFormer](https://arxiv.org/abs/2105.15203). We utilize `huggingface` and the `transformers` for the [source of the algorithm](https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512). The main idea is for this container to act as a standalone interface and node, removing the necessity to integrate separate packages and solve numerous dependency issues.
+This is a ROS2 wrapper for Vision Transformers for Semantic Segmentation, [SegFormer](https://arxiv.org/abs/2105.15203). We utilize `huggingface` and the `transformers` for the [source of the algorithm](https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512). The main idea is for this container to act as a standalone interface and node, removing the necessity to integrate separate packages and solve numerous dependency issues.
 
 *From Paper:* SegFormer has two appealing features: 1) SegFormer comprises a novel hierarchically structured Transformer encoder which outputs multiscale features. It does not need positional encoding, thereby avoiding the interpolation of positional codes which leads to decreased performance when the testing resolution differs from training. 2) SegFormer avoids complex decoders. The proposed MLP decoder aggregates information from different layers, and thus combining both local attention and global attention to render powerful representations. The paper shows that this simple and lightweight design is the key to efficient segmentation on Transformers.
 
@@ -14,8 +14,8 @@ This is a ROS2 wrapper for Vision Transformers for Dense Prediction with an imag
 
 ## Build Docker Image Natively
 1. Install [Docker](https://www.docker.com/) and ensure the Docker daemon is running in the background.
-2. Clone this repo with ```git pull https://github.com/open-shade/segformer_seg.git```
-3. Enter the repo with ```cd segformer_seg```
+2. Clone this repo with ```git pull https://github.com/open-shade/segformer_segmentation.git```
+3. Enter the repo with ```cd segformer_segmentation```
 4. To pick a specific model version, edit the `ALGO_VERSION` constant in `/segformer_seg/segformer_seg.py`
 5. Build the container with ```docker build . -t [name]```. This will take a while. We have also provided associated `cloudbuild.sh` scripts to build on GCP all of the associated versions.
 6. Follow the run commands in the usage section below.
