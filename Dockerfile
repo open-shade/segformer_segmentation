@@ -29,7 +29,7 @@ COPY . ./src/segformer_seg
 
 RUN pip3 install ./src/segformer_seg && \
     : "Install the model" && \
-    python3 -c "from transformers import AutoFeatureExtractor; AutoFeatureExtractor.from_pretrained('${MODEL_NAME}')" && \
+    python3 -c "from transformers import AutoFeatureExtractor, SegformerForSemanticSegmentation; AutoFeatureExtractor.from_pretrained('${MODEL_NAME}'); SegformerForSemanticSegmentation.from_pretrained('${MODEL_NAME}')" && \
     colcon build
 
 ENTRYPOINT ["/home/shade/shade_ws/start.sh"]
