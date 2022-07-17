@@ -1,0 +1,14 @@
+name: Test
+
+on:
+  - push
+  - workflow_dispatch
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      ALGO: shaderobotics/segformer-segmentation
+    container: shaderobotics/segformer-segmentation:foxy-b0-finetuned-ade-512-512
+    steps:
+      - run: cd /home/shade/shade_ws && curl https://raw.githubusercontent.com/open-shade/algos/main/tests/run_tests.sh --output ./run_tests.sh
+      - run: cd /home/shade/shade_ws && chmod +x ./run_tests.sh && ./run_tests.sh
