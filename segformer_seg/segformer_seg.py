@@ -3,7 +3,6 @@ import os
 from transformers import AutoFeatureExtractor, SegformerForSemanticSegmentation
 import torch
 from PIL import Image as PilImage
-from palette import ade_palette
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
